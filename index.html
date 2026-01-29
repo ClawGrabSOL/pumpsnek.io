@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Slither SOL</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0a0f;
+            overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #fff;
+        }
+
+        #game-canvas {
+            display: block;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        #hud {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            padding: 15px 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        #hud > * {
+            pointer-events: auto;
+        }
+
+        .hud-left {
+            display: flex;
+            gap: 15px;
+        }
+
+        .info-box {
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px 20px;
+            border-radius: 10px;
+            border: 1px solid rgba(20, 241, 149, 0.3);
+            text-align: center;
+        }
+
+        .info-label {
+            font-size: 0.7rem;
+            color: #888;
+            margin-bottom: 3px;
+            text-transform: uppercase;
+        }
+
+        .info-value {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #14F195;
+        }
+
+        #leaderboard {
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 10px;
+            min-width: 180px;
+            border: 1px solid rgba(20, 241, 149, 0.3);
+        }
+
+        #leaderboard h3 {
+            color: #14F195;
+            margin-bottom: 10px;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .lb-entry {
+            display: flex;
+            justify-content: space-between;
+            padding: 4px 0;
+            font-size: 0.8rem;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .lb-entry:last-child {
+            border-bottom: none;
+        }
+
+        .lb-entry.you {
+            color: #14F195;
+            font-weight: bold;
+        }
+
+        .lb-rank {
+            color: #888;
+            margin-right: 8px;
+        }
+
+        #minimap {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 150px;
+            height: 100px;
+            background: rgba(0, 0, 0, 0.6);
+            border: 1px solid rgba(20, 241, 149, 0.3);
+            border-radius: 8px;
+            z-index: 10;
+        }
+
+        /* Login overlay */
+        #login-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: linear-gradient(135deg, #0a0a0f 0%, #1a1a2e 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        #login-overlay.hidden {
+            display: none;
+        }
+
+        #login-box {
+            text-align: center;
+        }
+
+        #login-box h1 {
+            font-size: 4rem;
+            margin-bottom: 10px;
+            background: linear-gradient(90deg, #14F195, #fff, #14F195);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: shimmer 3s ease infinite;
+            background-size: 200% auto;
+        }
+
+        @keyframes shimmer {
+            0%, 100% { background-position: 0% center; }
+            50% { background-position: 200% center; }
+        }
+
+        #login-box p {
+            color: #888;
+            margin-bottom: 40px;
+            font-size: 1.1rem;
+        }
+
+        #username-input {
+            width: 300px;
+            padding: 15px 25px;
+            font-size: 1.2rem;
+            border: 2px solid #14F195;
+            border-radius: 30px;
+            background: rgba(20, 241, 149, 0.1);
+            color: #fff;
+            outline: none;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        #username-input::placeholder {
+            color: #666;
+        }
+
+        #username-input:focus {
+            background: rgba(20, 241, 149, 0.2);
+            box-shadow: 0 0 30px rgba(20, 241, 149, 0.3);
+        }
+
+        #play-btn {
+            display: block;
+            width: 300px;
+            padding: 18px;
+            font-size: 1.4rem;
+            background: linear-gradient(90deg, #14F195, #0ea36a);
+            border: none;
+            border-radius: 30px;
+            color: #000;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 0 auto;
+        }
+
+        #play-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 40px rgba(20, 241, 149, 0.5);
+        }
+
+        #play-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .prize-info {
+            margin-top: 40px;
+            padding: 20px 40px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            border: 1px solid rgba(20, 241, 149, 0.2);
+        }
+
+        .prize-info h3 {
+            color: #14F195;
+            margin-bottom: 10px;
+        }
+
+        .prize-amount {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #fff;
+        }
+
+        .controls-hint {
+            margin-top: 30px;
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        /* Death overlay */
+        #death-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.85);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+        }
+
+        #death-overlay.hidden {
+            display: none;
+        }
+
+        #death-overlay h2 {
+            font-size: 3rem;
+            color: #ff4444;
+            margin-bottom: 20px;
+        }
+
+        #final-score {
+            font-size: 1.5rem;
+            margin-bottom: 30px;
+        }
+
+        #final-score span {
+            color: #14F195;
+            font-weight: bold;
+        }
+
+        #respawn-btn {
+            padding: 15px 40px;
+            font-size: 1.2rem;
+            background: #14F195;
+            border: none;
+            border-radius: 25px;
+            color: #000;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        #respawn-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 30px rgba(20, 241, 149, 0.5);
+        }
+
+        /* Connection status */
+        #connection-status {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            z-index: 10;
+        }
+
+        #connection-status.connected {
+            background: rgba(20, 241, 149, 0.2);
+            color: #14F195;
+        }
+
+        #connection-status.disconnected {
+            background: rgba(255, 68, 68, 0.2);
+            color: #ff4444;
+        }
+
+        /* Player count */
+        #player-count {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.7);
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            z-index: 10;
+            border: 1px solid rgba(20, 241, 149, 0.3);
+        }
+
+        #player-count span {
+            color: #14F195;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="game-canvas"></canvas>
+
+    <!-- HUD -->
+    <div id="hud" style="display: none;">
+        <div class="hud-left">
+            <div class="info-box">
+                <div class="info-label">Round</div>
+                <div class="info-value" id="round-num">1</div>
+            </div>
+            <div class="info-box">
+                <div class="info-label">Time Left</div>
+                <div class="info-value" id="time-left">2:00</div>
+            </div>
+            <div class="info-box">
+                <div class="info-label">Your Length</div>
+                <div class="info-value" id="your-length">10</div>
+            </div>
+        </div>
+        
+        <div id="leaderboard">
+            <h3>🏆 LEADERBOARD</h3>
+            <div id="lb-entries"></div>
+        </div>
+    </div>
+
+    <div id="player-count" style="display: none;">
+        <span id="online-count">0</span> players online
+    </div>
+
+    <canvas id="minimap" style="display: none;"></canvas>
+
+    <div id="connection-status" class="disconnected">● Connecting...</div>
+
+    <!-- Login -->
+    <div id="login-overlay">
+        <div id="login-box">
+            <h1>🐍 SLITHER SOL</h1>
+            <p>Compete to win $SOL every round</p>
+            
+            <input type="text" id="username-input" placeholder="Enter your name" maxlength="15" autofocus>
+            <button id="play-btn" disabled>Connecting...</button>
+            
+            <div class="prize-info">
+                <h3>💰 PRIZE POOL</h3>
+                <div class="prize-amount">0.5 SOL</div>
+            </div>
+            
+            <p class="controls-hint">🖱️ Move mouse to steer • Click to boost</p>
+        </div>
+    </div>
+
+    <!-- Death screen -->
+    <div id="death-overlay" class="hidden">
+        <h2>💀 YOU DIED</h2>
+        <p id="final-score">Final length: <span>0</span></p>
+        <button id="respawn-btn">Play Again</button>
+    </div>
+
+    <script>
+        // Canvas setup
+        const canvas = document.getElementById('game-canvas');
+        const ctx = canvas.getContext('2d');
+        const minimapCanvas = document.getElementById('minimap');
+        const minimapCtx = minimapCanvas.getContext('2d');
+
+        // Resize canvas to fullscreen
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        resize();
+        window.addEventListener('resize', resize);
+
+        // Game state
+        let ws = null;
+        let myId = null;
+        let players = [];
+        let food = [];
+        let camera = { x: 0, y: 0 };
+        let worldWidth = 4000;
+        let worldHeight = 3000;
+        let roundTime = 120;
+        let roundNum = 1;
+        let connected = false;
+        let inGame = false;
+
+        // UI elements
+        const loginOverlay = document.getElementById('login-overlay');
+        const deathOverlay = document.getElementById('death-overlay');
+        const hud = document.getElementById('hud');
+        const playerCountEl = document.getElementById('player-count');
+        const minimapEl = document.getElementById('minimap');
+        const playBtn = document.getElementById('play-btn');
+        const usernameInput = document.getElementById('username-input');
+        const respawnBtn = document.getElementById('respawn-btn');
+        const connectionStatus = document.getElementById('connection-status');
+
+        // Connect to server
+        function connect() {
+            const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+            ws = new WebSocket(`${protocol}//${location.host}`);
+            
+            ws.onopen = () => {
+                connected = true;
+                connectionStatus.className = 'connected';
+                connectionStatus.textContent = '● Connected';
+                playBtn.disabled = false;
+                playBtn.textContent = 'PLAY';
+            };
+            
+            ws.onclose = () => {
+                connected = false;
+                connectionStatus.className = 'disconnected';
+                connectionStatus.textContent = '● Disconnected';
+                playBtn.disabled = true;
+                playBtn.textContent = 'Reconnecting...';
+                setTimeout(connect, 2000);
+            };
+            
+            ws.onerror = () => {
+                connectionStatus.className = 'disconnected';
+                connectionStatus.textContent = '● Connection error';
+            };
+            
+            ws.onmessage = (e) => {
+                const msg = JSON.parse(e.data);
+                
+                switch (msg.type) {
+                    case 'joined':
+                        myId = msg.id;
+                        worldWidth = msg.worldWidth;
+                        worldHeight = msg.worldHeight;
+                        inGame = true;
+                        loginOverlay.classList.add('hidden');
+                        deathOverlay.classList.add('hidden');
+                        hud.style.display = 'flex';
+                        playerCountEl.style.display = 'block';
+                        minimapEl.style.display = 'block';
+                        break;
+                        
+                    case 'state':
+                        players = msg.players;
+                        food = msg.food;
+                        roundTime = msg.roundTime;
+                        roundNum = msg.roundNum;
+                        
+                        // Check if we died
+                        const me = players.find(p => p.id === myId);
+                        if (me && !me.alive && inGame) {
+                            showDeath(me.length);
+                        }
+                        break;
+                }
+            };
+        }
+
+        function showDeath(length) {
+            inGame = false;
+            deathOverlay.classList.remove('hidden');
+            document.getElementById('final-score').innerHTML = `Final length: <span>${length}</span>`;
+        }
+
+        // Join game
+        function joinGame() {
+            const name = usernameInput.value.trim() || 'Anonymous';
+            ws.send(JSON.stringify({ type: 'join', name }));
+        }
+
+        // Respawn
+        function respawn() {
+            ws.send(JSON.stringify({ type: 'respawn' }));
+            deathOverlay.classList.add('hidden');
+            inGame = true;
+        }
+
+        // Input handling
+        let mouseX = 0, mouseY = 0;
+        let boosting = false;
+
+        document.addEventListener('mousemove', (e) => {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+        });
+
+        document.addEventListener('mousedown', () => boosting = true);
+        document.addEventListener('mouseup', () => boosting = false);
+
+        // Send input to server
+        function sendInput() {
+            if (!connected || !inGame || !myId) return;
+            
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            const angle = Math.atan2(mouseY - centerY, mouseX - centerX);
+            
+            ws.send(JSON.stringify({
+                type: 'input',
+                angle: angle,
+                boost: boosting
+            }));
+        }
+
+        setInterval(sendInput, 1000 / 30);
+
+        // Format time
+        function formatTime(seconds) {
+            const m = Math.floor(seconds / 60);
+            const s = seconds % 60;
+            return `${m}:${s.toString().padStart(2, '0')}`;
+        }
+
+        // Draw grid
+        function drawGrid() {
+            ctx.strokeStyle = 'rgba(20, 241, 149, 0.08)';
+            ctx.lineWidth = 1;
+
+            const gridSize = 60;
+            const startX = -(camera.x % gridSize);
+            const startY = -(camera.y % gridSize);
+
+            for (let x = startX; x < canvas.width; x += gridSize) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, canvas.height);
+                ctx.stroke();
+            }
+
+            for (let y = startY; y < canvas.height; y += gridSize) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(canvas.width, y);
+                ctx.stroke();
+            }
+        }
+
+        // Draw world border
+        function drawBorder() {
+            ctx.strokeStyle = '#14F195';
+            ctx.lineWidth = 5;
+            ctx.strokeRect(-camera.x, -camera.y, worldWidth, worldHeight);
+        }
+
+        // Draw food
+        function drawFood() {
+            food.forEach(f => {
+                const screenX = f.x - camera.x;
+                const screenY = f.y - camera.y;
+
+                if (screenX < -20 || screenX > canvas.width + 20 ||
+                    screenY < -20 || screenY > canvas.height + 20) return;
+
+                ctx.beginPath();
+                ctx.arc(screenX, screenY, f.radius, 0, Math.PI * 2);
+                ctx.fillStyle = f.color;
+                ctx.shadowColor = f.color;
+                ctx.shadowBlur = 8;
+                ctx.fill();
+                ctx.shadowBlur = 0;
+            });
+        }
+
+        // Draw snake
+        function drawSnake(snake) {
+            if (!snake.alive || !snake.segments.length) return;
+
+            // Draw segments
+            snake.segments.forEach((seg, i) => {
+                const screenX = seg.x - camera.x;
+                const screenY = seg.y - camera.y;
+
+                if (screenX < -30 || screenX > canvas.width + 30 ||
+                    screenY < -30 || screenY > canvas.height + 30) return;
+
+                const radius = 12 - (i / snake.segments.length) * 4;
+                const isGreen = i % 2 === 0;
+
+                ctx.beginPath();
+                ctx.arc(screenX, screenY, radius, 0, Math.PI * 2);
+                
+                if (isGreen) {
+                    ctx.fillStyle = '#14F195';
+                    ctx.shadowColor = '#14F195';
+                } else {
+                    ctx.fillStyle = '#ffffff';
+                    ctx.shadowColor = '#ffffff';
+                }
+                ctx.shadowBlur = snake.id === myId ? 15 : 8;
+                ctx.fill();
+                ctx.shadowBlur = 0;
+            });
+
+            // Draw eyes
+            const head = snake.segments[0];
+            const screenX = head.x - camera.x;
+            const screenY = head.y - camera.y;
+
+            if (screenX > -30 && screenX < canvas.width + 30 &&
+                screenY > -30 && screenY < canvas.height + 30) {
+                
+                const eyeOffset = 6;
+                const eyeAngle1 = snake.angle + 0.5;
+                const eyeAngle2 = snake.angle - 0.5;
+
+                ctx.fillStyle = '#000';
+                ctx.beginPath();
+                ctx.arc(
+                    screenX + Math.cos(eyeAngle1) * eyeOffset,
+                    screenY + Math.sin(eyeAngle1) * eyeOffset,
+                    3, 0, Math.PI * 2
+                );
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(
+                    screenX + Math.cos(eyeAngle2) * eyeOffset,
+                    screenY + Math.sin(eyeAngle2) * eyeOffset,
+                    3, 0, Math.PI * 2
+                );
+                ctx.fill();
+
+                // Draw name
+                ctx.fillStyle = snake.id === myId ? '#14F195' : '#fff';
+                ctx.font = 'bold 14px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(snake.name, screenX, screenY - 20);
+            }
+        }
+
+        // Draw minimap
+        function drawMinimap() {
+            minimapCtx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+            minimapCtx.fillRect(0, 0, 150, 100);
+
+            const scaleX = 150 / worldWidth;
+            const scaleY = 100 / worldHeight;
+
+            // Draw players
+            players.forEach(p => {
+                if (!p.alive || !p.segments.length) return;
+                minimapCtx.fillStyle = p.id === myId ? '#14F195' : 'rgba(255, 255, 255, 0.6)';
+                minimapCtx.beginPath();
+                minimapCtx.arc(
+                    p.segments[0].x * scaleX,
+                    p.segments[0].y * scaleY,
+                    p.id === myId ? 4 : 2,
+                    0, Math.PI * 2
+                );
+                minimapCtx.fill();
+            });
+
+            // Draw viewport
+            minimapCtx.strokeStyle = 'rgba(20, 241, 149, 0.5)';
+            minimapCtx.lineWidth = 1;
+            minimapCtx.strokeRect(
+                camera.x * scaleX,
+                camera.y * scaleY,
+                canvas.width * scaleX,
+                canvas.height * scaleY
+            );
+        }
+
+        // Update leaderboard
+        function updateLeaderboard() {
+            const sorted = [...players]
+                .filter(p => p.alive)
+                .sort((a, b) => b.length - a.length)
+                .slice(0, 8);
+
+            document.getElementById('lb-entries').innerHTML = sorted.map((p, i) => `
+                <div class="lb-entry ${p.id === myId ? 'you' : ''}">
+                    <span><span class="lb-rank">${i + 1}.</span>${p.name}</span>
+                    <span>${p.length}</span>
+                </div>
+            `).join('');
+
+            document.getElementById('online-count').textContent = players.filter(p => p.alive).length;
+        }
+
+        // Game loop
+        function render() {
+            // Clear
+            ctx.fillStyle = '#0a0a0f';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Find my player
+            const me = players.find(p => p.id === myId);
+            
+            if (me && me.alive && me.segments.length) {
+                camera.x = me.segments[0].x - canvas.width / 2;
+                camera.y = me.segments[0].y - canvas.height / 2;
+                document.getElementById('your-length').textContent = me.length;
+            }
+
+            // Draw
+            drawGrid();
+            drawBorder();
+            drawFood();
+            
+            // Draw other snakes first, then me on top
+            players.filter(p => p.id !== myId).forEach(drawSnake);
+            if (me) drawSnake(me);
+
+            drawMinimap();
+            updateLeaderboard();
+
+            // Update HUD
+            document.getElementById('time-left').textContent = formatTime(roundTime);
+            document.getElementById('round-num').textContent = roundNum;
+
+            requestAnimationFrame(render);
+        }
+
+        // Event listeners
+        playBtn.addEventListener('click', joinGame);
+        respawnBtn.addEventListener('click', respawn);
+        usernameInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !playBtn.disabled) joinGame();
+        });
+
+        // Start
+        connect();
+        render();
+    </script>
+</body>
+</html>
