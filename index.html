@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Slither SOL</title>
+    <title>$PUMPSNEK</title>
+    <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -50,49 +51,51 @@
         }
 
         .info-box {
-            background: rgba(0, 0, 0, 0.7);
-            padding: 10px 20px;
-            border-radius: 10px;
-            border: 1px solid rgba(20, 241, 149, 0.3);
+            background: rgba(0, 0, 0, 0.8);
+            padding: 12px 24px;
+            border-radius: 8px;
+            border: 1px solid #14F195;
             text-align: center;
+            backdrop-filter: blur(10px);
         }
 
         .info-label {
-            font-size: 0.7rem;
-            color: #888;
-            margin-bottom: 3px;
+            font-size: 0.65rem;
+            color: #14F195;
+            margin-bottom: 4px;
             text-transform: uppercase;
+            letter-spacing: 1px;
         }
 
         .info-value {
-            font-size: 1.2rem;
+            font-size: 1.4rem;
             font-weight: bold;
-            color: #14F195;
+            color: #fff;
         }
 
         #leaderboard {
-            background: rgba(0, 0, 0, 0.7);
-            padding: 15px;
-            border-radius: 10px;
-            min-width: 180px;
-            border: 1px solid rgba(20, 241, 149, 0.3);
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px 20px;
+            border-radius: 8px;
+            min-width: 200px;
+            border: 1px solid #14F195;
+            backdrop-filter: blur(10px);
         }
 
         #leaderboard h3 {
             color: #14F195;
-            margin-bottom: 10px;
-            font-size: 0.85rem;
-            display: flex;
-            align-items: center;
-            gap: 5px;
+            margin-bottom: 12px;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
         }
 
         .lb-entry {
             display: flex;
             justify-content: space-between;
-            padding: 4px 0;
-            font-size: 0.8rem;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding: 6px 0;
+            font-size: 0.85rem;
+            border-bottom: 1px solid rgba(20, 241, 149, 0.2);
         }
 
         .lb-entry:last-child {
@@ -105,7 +108,7 @@
         }
 
         .lb-rank {
-            color: #888;
+            color: #666;
             margin-right: 8px;
         }
 
@@ -116,9 +119,47 @@
             width: 150px;
             height: 100px;
             background: rgba(0, 0, 0, 0.6);
-            border: 1px solid rgba(20, 241, 149, 0.3);
+            border: 1px solid #14F195;
             border-radius: 8px;
             z-index: 10;
+        }
+
+        /* Kill Feed */
+        #kill-feed {
+            position: fixed;
+            top: 100px;
+            left: 20px;
+            width: 280px;
+            z-index: 10;
+            pointer-events: none;
+        }
+
+        .kill-entry {
+            background: rgba(0, 0, 0, 0.7);
+            padding: 8px 12px;
+            margin-bottom: 5px;
+            border-radius: 5px;
+            font-size: 0.8rem;
+            border-left: 3px solid #ff4444;
+            animation: slideIn 0.3s ease, fadeOut 0.5s ease 4.5s forwards;
+        }
+
+        .kill-entry .killer {
+            color: #14F195;
+            font-weight: bold;
+        }
+
+        .kill-entry .victim {
+            color: #ff6b6b;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(-100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        @keyframes fadeOut {
+            to { opacity: 0; }
         }
 
         /* Login overlay */
@@ -128,7 +169,7 @@
             left: 0;
             width: 100vw;
             height: 100vh;
-            background: linear-gradient(135deg, #0a0a0f 0%, #1a1a2e 100%);
+            background: linear-gradient(135deg, #0a0a0f 0%, #0d1f17 50%, #0a0a0f 100%);
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -142,101 +183,184 @@
 
         #login-box {
             text-align: center;
+            max-width: 500px;
         }
 
         #login-box h1 {
-            font-size: 4rem;
-            margin-bottom: 10px;
-            background: linear-gradient(90deg, #14F195, #fff, #14F195);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            animation: shimmer 3s ease infinite;
-            background-size: 200% auto;
+            font-size: 4.5rem;
+            margin-bottom: 5px;
+            color: #14F195;
+            text-shadow: 0 0 40px rgba(20, 241, 149, 0.5);
+            letter-spacing: -2px;
         }
 
-        @keyframes shimmer {
-            0%, 100% { background-position: 0% center; }
-            50% { background-position: 200% center; }
-        }
-
-        #login-box p {
-            color: #888;
-            margin-bottom: 40px;
+        .tagline {
+            color: #666;
+            margin-bottom: 50px;
             font-size: 1.1rem;
+            letter-spacing: 2px;
         }
 
         #username-input {
-            width: 300px;
-            padding: 15px 25px;
-            font-size: 1.2rem;
+            width: 100%;
+            max-width: 350px;
+            padding: 18px 25px;
+            font-size: 1.1rem;
             border: 2px solid #14F195;
-            border-radius: 30px;
-            background: rgba(20, 241, 149, 0.1);
+            border-radius: 8px;
+            background: rgba(20, 241, 149, 0.05);
             color: #fff;
             outline: none;
             text-align: center;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
+            transition: all 0.3s ease;
         }
 
         #username-input::placeholder {
-            color: #666;
+            color: #444;
         }
 
         #username-input:focus {
-            background: rgba(20, 241, 149, 0.2);
-            box-shadow: 0 0 30px rgba(20, 241, 149, 0.3);
+            background: rgba(20, 241, 149, 0.1);
+            box-shadow: 0 0 30px rgba(20, 241, 149, 0.2);
         }
 
         #play-btn {
             display: block;
-            width: 300px;
+            width: 100%;
+            max-width: 350px;
             padding: 18px;
-            font-size: 1.4rem;
-            background: linear-gradient(90deg, #14F195, #0ea36a);
+            font-size: 1.3rem;
+            background: #14F195;
             border: none;
-            border-radius: 30px;
+            border-radius: 8px;
             color: #000;
             font-weight: bold;
             cursor: pointer;
             transition: all 0.3s ease;
             margin: 0 auto;
+            text-transform: uppercase;
+            letter-spacing: 2px;
         }
 
-        #play-btn:hover {
-            transform: scale(1.05);
-            box-shadow: 0 0 40px rgba(20, 241, 149, 0.5);
+        #play-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 40px rgba(20, 241, 149, 0.4);
         }
 
         #play-btn:disabled {
             opacity: 0.5;
             cursor: not-allowed;
-            transform: none;
         }
 
-        .prize-info {
-            margin-top: 40px;
-            padding: 20px 40px;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 15px;
-            border: 1px solid rgba(20, 241, 149, 0.2);
+        .prize-section {
+            margin-top: 50px;
+            display: flex;
+            gap: 30px;
+            justify-content: center;
         }
 
-        .prize-info h3 {
+        .prize-box {
+            background: rgba(20, 241, 149, 0.05);
+            border: 1px solid rgba(20, 241, 149, 0.3);
+            padding: 20px 35px;
+            border-radius: 8px;
+        }
+
+        .prize-box h4 {
             color: #14F195;
-            margin-bottom: 10px;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 8px;
         }
 
-        .prize-amount {
-            font-size: 2rem;
+        .prize-box .value {
+            font-size: 1.8rem;
             font-weight: bold;
-            color: #fff;
         }
 
         .controls-hint {
-            margin-top: 30px;
+            margin-top: 40px;
+            color: #444;
+            font-size: 0.85rem;
+        }
+
+        .controls-hint span {
             color: #666;
-            font-size: 0.9rem;
+            margin: 0 15px;
+        }
+
+        .wallet-btn {
+            display: block;
+            width: 100%;
+            max-width: 350px;
+            padding: 14px;
+            font-size: 1rem;
+            background: transparent;
+            border: 2px solid #9945FF;
+            border-radius: 8px;
+            color: #9945FF;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 0 auto 10px auto;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .wallet-btn:hover {
+            background: rgba(153, 69, 255, 0.1);
+        }
+
+        .wallet-btn.connected {
+            background: rgba(153, 69, 255, 0.2);
+            border-color: #14F195;
+            color: #14F195;
+        }
+
+        .wallet-status {
+            font-size: 0.75rem;
+            color: #666;
+            margin-bottom: 15px;
+            height: 20px;
+        }
+
+        .wallet-status.connected {
+            color: #14F195;
+        }
+
+        /* Stats ticker */
+        #stats-ticker {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0, 0, 0, 0.9);
+            border-top: 1px solid #14F195;
+            padding: 10px 30px;
+            display: flex;
+            justify-content: center;
+            gap: 50px;
+            font-size: 0.8rem;
+            z-index: 10;
+        }
+
+        .ticker-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .ticker-label {
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .ticker-value {
+            color: #14F195;
+            font-weight: bold;
         }
 
         /* Death overlay */
@@ -246,7 +370,7 @@
             left: 0;
             width: 100vw;
             height: 100vh;
-            background: rgba(0, 0, 0, 0.85);
+            background: rgba(0, 0, 0, 0.9);
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -259,57 +383,132 @@
         }
 
         #death-overlay h2 {
-            font-size: 3rem;
+            font-size: 4rem;
             color: #ff4444;
-            margin-bottom: 20px;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 5px;
+        }
+
+        #killer-info {
+            color: #888;
+            font-size: 1.2rem;
+            margin-bottom: 30px;
+        }
+
+        #killer-info span {
+            color: #14F195;
+            font-weight: bold;
         }
 
         #final-score {
             font-size: 1.5rem;
-            margin-bottom: 30px;
+            margin-bottom: 40px;
         }
 
         #final-score span {
             color: #14F195;
             font-weight: bold;
+            font-size: 2rem;
         }
 
         #respawn-btn {
-            padding: 15px 40px;
-            font-size: 1.2rem;
+            padding: 18px 50px;
+            font-size: 1.1rem;
             background: #14F195;
             border: none;
-            border-radius: 25px;
+            border-radius: 8px;
             color: #000;
             font-weight: bold;
             cursor: pointer;
             transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 2px;
         }
 
         #respawn-btn:hover {
-            transform: scale(1.05);
-            box-shadow: 0 0 30px rgba(20, 241, 149, 0.5);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 40px rgba(20, 241, 149, 0.4);
         }
 
         /* Connection status */
         #connection-status {
             position: fixed;
-            bottom: 20px;
+            bottom: 60px;
             left: 20px;
             padding: 8px 15px;
-            border-radius: 20px;
-            font-size: 0.8rem;
+            border-radius: 5px;
+            font-size: 0.75rem;
             z-index: 10;
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
 
         #connection-status.connected {
-            background: rgba(20, 241, 149, 0.2);
+            background: rgba(20, 241, 149, 0.1);
             color: #14F195;
+            border: 1px solid rgba(20, 241, 149, 0.3);
         }
 
         #connection-status.disconnected {
-            background: rgba(255, 68, 68, 0.2);
+            background: rgba(255, 68, 68, 0.1);
             color: #ff4444;
+            border: 1px solid rgba(255, 68, 68, 0.3);
+        }
+
+        /* Boost indicator */
+        #boost-bar {
+            position: fixed;
+            bottom: 140px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 200px;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            z-index: 10;
+            display: none;
+        }
+
+        #boost-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #14F195, #0ea36a);
+            border-radius: 3px;
+            transition: width 0.1s ease;
+        }
+
+        /* Round winner announcement */
+        #winner-announcement {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.95);
+            border: 2px solid #14F195;
+            padding: 50px 80px;
+            border-radius: 10px;
+            text-align: center;
+            z-index: 200;
+            display: none;
+        }
+
+        #winner-announcement h2 {
+            color: #14F195;
+            font-size: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            margin-bottom: 15px;
+        }
+
+        #winner-announcement .winner-name {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        #winner-announcement .prize {
+            font-size: 1.5rem;
+            color: #14F195;
         }
 
         /* Player count */
@@ -318,10 +517,10 @@
             top: 20px;
             left: 50%;
             transform: translateX(-50%);
-            background: rgba(0, 0, 0, 0.7);
-            padding: 8px 20px;
-            border-radius: 20px;
-            font-size: 0.9rem;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 10px 25px;
+            border-radius: 5px;
+            font-size: 0.85rem;
             z-index: 10;
             border: 1px solid rgba(20, 241, 149, 0.3);
         }
@@ -329,6 +528,73 @@
         #player-count span {
             color: #14F195;
             font-weight: bold;
+        }
+
+        /* Waiting overlay */
+        #waiting-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.85);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 50;
+        }
+
+        #waiting-overlay.hidden {
+            display: none;
+        }
+
+        .waiting-box {
+            text-align: center;
+        }
+
+        .waiting-box h2 {
+            color: #14F195;
+            font-size: 1.5rem;
+            letter-spacing: 3px;
+            margin-bottom: 30px;
+        }
+
+        .player-count-display {
+            font-size: 4rem;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+
+        .player-count-display #current-players {
+            color: #14F195;
+        }
+
+        .player-count-display #min-players {
+            color: #666;
+        }
+
+        .waiting-box p {
+            color: #666;
+            margin-bottom: 20px;
+        }
+
+        .waiting-dots span {
+            font-size: 2rem;
+            color: #14F195;
+            animation: blink 1.4s infinite;
+        }
+
+        .waiting-dots span:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .waiting-dots span:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes blink {
+            0%, 80%, 100% { opacity: 0; }
+            40% { opacity: 1; }
         }
     </style>
 </head>
@@ -344,7 +610,7 @@
             </div>
             <div class="info-box">
                 <div class="info-label">Time Left</div>
-                <div class="info-value" id="time-left">2:00</div>
+                <div class="info-value" id="time-left">5:00</div>
             </div>
             <div class="info-box">
                 <div class="info-label">Your Length</div>
@@ -353,7 +619,7 @@
         </div>
         
         <div id="leaderboard">
-            <h3>🏆 LEADERBOARD</h3>
+            <h3>Leaderboard</h3>
             <div id="lb-entries"></div>
         </div>
     </div>
@@ -362,36 +628,164 @@
         <span id="online-count">0</span> players online
     </div>
 
+    <div id="kill-feed"></div>
+
     <canvas id="minimap" style="display: none;"></canvas>
 
-    <div id="connection-status" class="disconnected">● Connecting...</div>
+    <div id="boost-bar" style="display: none;">
+        <div id="boost-fill" style="width: 100%;"></div>
+    </div>
+
+    <div id="connection-status" class="disconnected">Connecting...</div>
+
+    <!-- Stats Ticker -->
+    <div id="stats-ticker" style="display: none;">
+        <div class="ticker-item">
+            <span class="ticker-label">Prize Pool</span>
+            <span class="ticker-value">0.1 SOL</span>
+        </div>
+        <div class="ticker-item">
+            <span class="ticker-label">Players</span>
+            <span class="ticker-value" id="ticker-players">0</span>
+        </div>
+        <div class="ticker-item">
+            <span class="ticker-label">Your Rank</span>
+            <span class="ticker-value" id="ticker-rank">-</span>
+        </div>
+        <div class="ticker-item">
+            <span class="ticker-label">Top Snek</span>
+            <span class="ticker-value" id="ticker-top">-</span>
+        </div>
+    </div>
 
     <!-- Login -->
     <div id="login-overlay">
         <div id="login-box">
-            <h1>🐍 SLITHER SOL</h1>
-            <p>Compete to win $SOL every round</p>
+            <h1>$PUMPSNEK</h1>
+            <p class="tagline">EAT OR GET EATEN</p>
             
             <input type="text" id="username-input" placeholder="Enter your name" maxlength="15" autofocus>
-            <button id="play-btn" disabled>Connecting...</button>
             
-            <div class="prize-info">
-                <h3>💰 PRIZE POOL</h3>
-                <div class="prize-amount">0.5 SOL</div>
+            <button id="wallet-btn" class="wallet-btn">CONNECT WALLET</button>
+            <div id="wallet-status" class="wallet-status"></div>
+            
+            <button id="play-btn" disabled>CONNECTING...</button>
+            
+            <div class="prize-section">
+                <div class="prize-box">
+                    <h4>Round Prize</h4>
+                    <div class="value">0.1 SOL</div>
+                </div>
+                <div class="prize-box">
+                    <h4>Round Time</h4>
+                    <div class="value">5:00</div>
+                </div>
             </div>
             
-            <p class="controls-hint">🖱️ Move mouse to steer • Click to boost</p>
+            <p class="controls-hint">
+                <span>MOUSE to steer</span>
+                <span>CLICK to boost</span>
+                <span>SURVIVE to win</span>
+            </p>
         </div>
     </div>
 
     <!-- Death screen -->
     <div id="death-overlay" class="hidden">
-        <h2>💀 YOU DIED</h2>
+        <h2>REKT</h2>
+        <p id="killer-info">Killed by <span id="killer-name">???</span></p>
         <p id="final-score">Final length: <span>0</span></p>
-        <button id="respawn-btn">Play Again</button>
+        <button id="respawn-btn">PLAY AGAIN</button>
+    </div>
+
+    <!-- Winner announcement -->
+    <div id="winner-announcement">
+        <h2>Round Winner</h2>
+        <div class="winner-name" id="winner-name-display">-</div>
+        <div class="prize">+0.1 SOL</div>
+    </div>
+
+    <!-- Waiting for players overlay -->
+    <div id="waiting-overlay" class="hidden">
+        <div class="waiting-box">
+            <h2>WAITING FOR PLAYERS</h2>
+            <div class="player-count-display">
+                <span id="current-players">0</span> / <span id="min-players">8</span>
+            </div>
+            <p>Round starts when 8 players join</p>
+            <div class="waiting-dots"><span>.</span><span>.</span><span>.</span></div>
+        </div>
     </div>
 
     <script>
+        // Wallet state
+        let walletAddress = null;
+        let walletConnected = false;
+        
+        const walletBtn = document.getElementById('wallet-btn');
+        const walletStatus = document.getElementById('wallet-status');
+        
+        // Check if Phantom is installed
+        const getProvider = () => {
+            if ('phantom' in window) {
+                const provider = window.phantom?.solana;
+                if (provider?.isPhantom) {
+                    return provider;
+                }
+            }
+            return null;
+        };
+        
+        // Connect wallet
+        async function connectWallet() {
+            const provider = getProvider();
+            
+            if (!provider) {
+                window.open('https://phantom.app/', '_blank');
+                walletStatus.textContent = 'Please install Phantom wallet';
+                return;
+            }
+            
+            try {
+                const resp = await provider.connect();
+                walletAddress = resp.publicKey.toString();
+                walletConnected = true;
+                
+                walletBtn.textContent = walletAddress.slice(0, 4) + '...' + walletAddress.slice(-4);
+                walletBtn.classList.add('connected');
+                walletStatus.textContent = 'Wallet connected - eligible for payouts';
+                walletStatus.classList.add('connected');
+                
+                console.log('Wallet connected:', walletAddress);
+            } catch (err) {
+                console.error('Wallet connection failed:', err);
+                walletStatus.textContent = 'Connection failed - try again';
+            }
+        }
+        
+        // Listen for wallet button click
+        document.addEventListener('DOMContentLoaded', () => {
+            const btn = document.getElementById('wallet-btn');
+            if (btn) {
+                btn.addEventListener('click', connectWallet);
+            }
+            
+            // Check if already connected
+            const provider = getProvider();
+            if (provider?.isConnected) {
+                provider.connect({ onlyIfTrusted: true })
+                    .then(resp => {
+                        walletAddress = resp.publicKey.toString();
+                        walletConnected = true;
+                        document.getElementById('wallet-btn').textContent = walletAddress.slice(0, 4) + '...' + walletAddress.slice(-4);
+                        document.getElementById('wallet-btn').classList.add('connected');
+                        document.getElementById('wallet-status').textContent = 'Wallet connected';
+                        document.getElementById('wallet-status').classList.add('connected');
+                    })
+                    .catch(() => {});
+            }
+        });
+
         // Canvas setup
         const canvas = document.getElementById('game-canvas');
         const ctx = canvas.getContext('2d');
@@ -414,10 +808,12 @@
         let camera = { x: 0, y: 0 };
         let worldWidth = 4000;
         let worldHeight = 3000;
-        let roundTime = 120;
+        let roundTime = 300;
         let roundNum = 1;
         let connected = false;
         let inGame = false;
+        let lastKiller = null;
+        let kills = [];
 
         // UI elements
         const loginOverlay = document.getElementById('login-overlay');
@@ -429,6 +825,25 @@
         const usernameInput = document.getElementById('username-input');
         const respawnBtn = document.getElementById('respawn-btn');
         const connectionStatus = document.getElementById('connection-status');
+        const killFeed = document.getElementById('kill-feed');
+        const statsTicker = document.getElementById('stats-ticker');
+        const boostBar = document.getElementById('boost-bar');
+
+        // Add kill to feed
+        function addKill(killer, victim) {
+            const entry = document.createElement('div');
+            entry.className = 'kill-entry';
+            entry.innerHTML = `<span class="killer">${killer}</span> ate <span class="victim">${victim}</span>`;
+            killFeed.prepend(entry);
+            
+            // Remove after animation
+            setTimeout(() => entry.remove(), 5000);
+            
+            // Keep max 5
+            while (killFeed.children.length > 5) {
+                killFeed.lastChild.remove();
+            }
+        }
 
         // Connect to server
         function connect() {
@@ -438,7 +853,7 @@
             ws.onopen = () => {
                 connected = true;
                 connectionStatus.className = 'connected';
-                connectionStatus.textContent = '● Connected';
+                connectionStatus.textContent = 'Connected';
                 playBtn.disabled = false;
                 playBtn.textContent = 'PLAY';
             };
@@ -446,15 +861,15 @@
             ws.onclose = () => {
                 connected = false;
                 connectionStatus.className = 'disconnected';
-                connectionStatus.textContent = '● Disconnected';
+                connectionStatus.textContent = 'Disconnected';
                 playBtn.disabled = true;
-                playBtn.textContent = 'Reconnecting...';
+                playBtn.textContent = 'RECONNECTING...';
                 setTimeout(connect, 2000);
             };
             
             ws.onerror = () => {
                 connectionStatus.className = 'disconnected';
-                connectionStatus.textContent = '● Connection error';
+                connectionStatus.textContent = 'Connection error';
             };
             
             ws.onmessage = (e) => {
@@ -471,6 +886,8 @@
                         hud.style.display = 'flex';
                         playerCountEl.style.display = 'block';
                         minimapEl.style.display = 'block';
+                        statsTicker.style.display = 'flex';
+                        boostBar.style.display = 'block';
                         break;
                         
                     case 'state':
@@ -479,26 +896,69 @@
                         roundTime = msg.roundTime;
                         roundNum = msg.roundNum;
                         
+                        // Handle waiting for players
+                        const waitingOverlay = document.getElementById('waiting-overlay');
+                        if (msg.waiting && inGame) {
+                            waitingOverlay.classList.remove('hidden');
+                            document.getElementById('current-players').textContent = msg.currentPlayers;
+                            document.getElementById('min-players').textContent = msg.minPlayers;
+                        } else {
+                            waitingOverlay.classList.add('hidden');
+                        }
+                        
                         // Check if we died
                         const me = players.find(p => p.id === myId);
                         if (me && !me.alive && inGame) {
                             showDeath(me.length);
                         }
                         break;
+                        
+                    case 'roundStart':
+                        console.log(`Round ${msg.round} starting with ${msg.players} players!`);
+                        break;
+                        
+                    case 'kill':
+                        addKill(msg.killer, msg.victim);
+                        if (msg.victimId === myId) {
+                            lastKiller = msg.killer;
+                        }
+                        break;
+                        
+                    case 'roundEnd':
+                        showWinner(msg.winner, msg.prize, msg.round);
+                        break;
                 }
             };
+        }
+        
+        // Show winner announcement
+        function showWinner(name, prize, round) {
+            const announcement = document.getElementById('winner-announcement');
+            document.getElementById('winner-name-display').textContent = name || 'No winner';
+            announcement.style.display = 'block';
+            
+            // Hide after 5 seconds
+            setTimeout(() => {
+                announcement.style.display = 'none';
+            }, 5000);
         }
 
         function showDeath(length) {
             inGame = false;
             deathOverlay.classList.remove('hidden');
             document.getElementById('final-score').innerHTML = `Final length: <span>${length}</span>`;
+            document.getElementById('killer-name').textContent = lastKiller || '???';
+            boostBar.style.display = 'none';
         }
 
         // Join game
         function joinGame() {
-            const name = usernameInput.value.trim() || 'Anonymous';
-            ws.send(JSON.stringify({ type: 'join', name }));
+            const name = usernameInput.value.trim() || 'Anon';
+            ws.send(JSON.stringify({ 
+                type: 'join', 
+                name,
+                wallet: walletAddress 
+            }));
         }
 
         // Respawn
@@ -506,6 +966,8 @@
             ws.send(JSON.stringify({ type: 'respawn' }));
             deathOverlay.classList.add('hidden');
             inGame = true;
+            lastKiller = null;
+            boostBar.style.display = 'block';
         }
 
         // Input handling
@@ -546,7 +1008,7 @@
 
         // Draw grid
         function drawGrid() {
-            ctx.strokeStyle = 'rgba(20, 241, 149, 0.08)';
+            ctx.strokeStyle = 'rgba(20, 241, 149, 0.05)';
             ctx.lineWidth = 1;
 
             const gridSize = 60;
@@ -572,7 +1034,10 @@
         function drawBorder() {
             ctx.strokeStyle = '#14F195';
             ctx.lineWidth = 5;
+            ctx.shadowColor = '#14F195';
+            ctx.shadowBlur = 20;
             ctx.strokeRect(-camera.x, -camera.y, worldWidth, worldHeight);
+            ctx.shadowBlur = 0;
         }
 
         // Draw food
@@ -588,7 +1053,7 @@
                 ctx.arc(screenX, screenY, f.radius, 0, Math.PI * 2);
                 ctx.fillStyle = f.color;
                 ctx.shadowColor = f.color;
-                ctx.shadowBlur = 8;
+                ctx.shadowBlur = 10;
                 ctx.fill();
                 ctx.shadowBlur = 0;
             });
@@ -654,9 +1119,14 @@
 
                 // Draw name
                 ctx.fillStyle = snake.id === myId ? '#14F195' : '#fff';
-                ctx.font = 'bold 14px sans-serif';
+                ctx.font = 'bold 13px sans-serif';
                 ctx.textAlign = 'center';
-                ctx.fillText(snake.name, screenX, screenY - 20);
+                ctx.fillText(snake.name, screenX, screenY - 22);
+                
+                // Draw length below name
+                ctx.fillStyle = '#888';
+                ctx.font = '11px sans-serif';
+                ctx.fillText(snake.length, screenX, screenY - 10);
             }
         }
 
@@ -697,17 +1167,38 @@
         function updateLeaderboard() {
             const sorted = [...players]
                 .filter(p => p.alive)
-                .sort((a, b) => b.length - a.length)
-                .slice(0, 8);
+                .sort((a, b) => b.length - a.length);
+                
+            const top8 = sorted.slice(0, 8);
 
-            document.getElementById('lb-entries').innerHTML = sorted.map((p, i) => `
+            document.getElementById('lb-entries').innerHTML = top8.map((p, i) => `
                 <div class="lb-entry ${p.id === myId ? 'you' : ''}">
                     <span><span class="lb-rank">${i + 1}.</span>${p.name}</span>
                     <span>${p.length}</span>
                 </div>
             `).join('');
 
-            document.getElementById('online-count').textContent = players.filter(p => p.alive).length;
+            const aliveCount = sorted.length;
+            document.getElementById('online-count').textContent = aliveCount;
+            document.getElementById('ticker-players').textContent = aliveCount;
+            
+            // Update rank
+            const myRank = sorted.findIndex(p => p.id === myId) + 1;
+            document.getElementById('ticker-rank').textContent = myRank > 0 ? `#${myRank}` : '-';
+            
+            // Update top player
+            if (sorted.length > 0) {
+                document.getElementById('ticker-top').textContent = `${sorted[0].name} (${sorted[0].length})`;
+            }
+        }
+
+        // Update boost bar
+        function updateBoostBar() {
+            const me = players.find(p => p.id === myId);
+            if (me && me.alive) {
+                const boostPercent = Math.min(100, (me.length / 50) * 100);
+                document.getElementById('boost-fill').style.width = boostPercent + '%';
+            }
         }
 
         // Game loop
@@ -736,6 +1227,7 @@
 
             drawMinimap();
             updateLeaderboard();
+            updateBoostBar();
 
             // Update HUD
             document.getElementById('time-left').textContent = formatTime(roundTime);

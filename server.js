@@ -1,20 +1,120 @@
+require('dotenv').config();
 const WebSocket = require('ws');
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
+const { Connection, Keypair, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL } = require('@solana/web3.js');
+const bs58 = require('bs58');
 
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
+const PRIZE_AMOUNT = parseFloat(process.env.PRIZE_AMOUNT) || 0.1;
+const PAYOUT_PRIVATE_KEY = process.env.PAYOUT_PRIVATE_KEY;
+
+// Solana connection (mainnet)
+const connection = new Connection('https://api.mainnet-beta.solana.com', 'confirmed');
+
+// Load payout wallet
+let payoutWallet = null;
+if (PAYOUT_PRIVATE_KEY && PAYOUT_PRIVATE_KEY !== 'YOUR_PRIVATE_KEY_HERE') {
+    try {
+        const secretKey = bs58.decode(PAYOUT_PRIVATE_KEY);
+        payoutWallet = Keypair.fromSecretKey(secretKey);
+        console.log(`Payout wallet loaded: ${payoutWallet.publicKey.toString()}`);
+    } catch (e) {
+        console.error('Failed to load payout wallet:', e.message);
+    }
+}
+
+// Payout queue
+let payoutQueue = [];
+let processingPayout = false;
+
+// Process payout
+async function processPayout(payout) {
+    if (!payoutWallet) {
+        console.log('[PAYOUT] No wallet configured - skipping');
+        return false;
+    }
+    
+    try {
+        const recipientPubkey = new PublicKey(payout.wallet);
+        const lamports = Math.floor(payout.amount * LAMPORTS_PER_SOL);
+        
+        // Check balance
+        const balance = await connection.getBalance(payoutWallet.publicKey);
+        if (balance < lamports + 5000) { // + fee buffer
+            console.log(`[PAYOUT] Insufficient balance: ${balance / LAMPORTS_PER_SOL} SOL`);
+            return false;
+        }
+        
+        // Create transaction
+        const transaction = new Transaction().add(
+            SystemProgram.transfer({
+                fromPubkey: payoutWallet.publicKey,
+                toPubkey: recipientPubkey,
+                lamports: lamports
+            })
+        );
+        
+        // Get recent blockhash
+        const { blockhash } = await connection.getLatestBlockhash();
+        transaction.recentBlockhash = blockhash;
+        transaction.feePayer = payoutWallet.publicKey;
+        
+        // Sign and send
+        transaction.sign(payoutWallet);
+        const signature = await connection.sendRawTransaction(transaction.serialize());
+        
+        // Confirm
+        await connection.confirmTransaction(signature);
+        
+        console.log(`[PAYOUT SUCCESS] ${payout.amount} SOL to ${payout.wallet.slice(0,4)}...${payout.wallet.slice(-4)}`);
+        console.log(`[TX] https://solscan.io/tx/${signature}`);
+        
+        return true;
+    } catch (e) {
+        console.error('[PAYOUT ERROR]', e.message);
+        return false;
+    }
+}
+
+// Process payout queue
+async function processPayoutQueue() {
+    if (processingPayout || payoutQueue.length === 0) return;
+    
+    processingPayout = true;
+    const payout = payoutQueue.shift();
+    
+    const success = await processPayout(payout);
+    if (!success) {
+        // Re-queue failed payouts (max 3 retries)
+        payout.retries = (payout.retries || 0) + 1;
+        if (payout.retries < 3) {
+            payoutQueue.push(payout);
+        } else {
+            console.log(`[PAYOUT] Giving up on payout to ${payout.wallet} after 3 retries`);
+        }
+    }
+    
+    processingPayout = false;
+}
+
+// Process payouts every 10 seconds
+setInterval(processPayoutQueue, 10000);
 const WORLD_WIDTH = 4000;
 const WORLD_HEIGHT = 3000;
 const TICK_RATE = 60;
-const ROUND_TIME = 120;
+const ROUND_TIME = 300;
+const MIN_PLAYERS = 8;
 
 // Game state
 let players = new Map();
 let food = [];
 let gameRunning = true;
+let roundActive = false;
 let roundTime = ROUND_TIME;
 let roundNum = 1;
+let waitingForPlayers = true;
 
 // Generate initial food
 function spawnFood(count = 1) {
@@ -62,9 +162,10 @@ const wss = new WebSocket.Server({ server });
 
 // Player class
 class Player {
-    constructor(id, name) {
+    constructor(id, name, wallet = null) {
         this.id = id;
         this.name = name;
+        this.wallet = wallet;
         this.segments = [];
         this.angle = Math.random() * Math.PI * 2;
         this.targetAngle = this.angle;
@@ -183,7 +284,7 @@ wss.on('connection', (ws) => {
             switch (msg.type) {
                 case 'join':
                     playerId = Math.random().toString(36).substr(2, 9);
-                    const player = new Player(playerId, msg.name || 'Anonymous');
+                    const player = new Player(playerId, msg.name || 'Anonymous', msg.wallet || null);
                     players.set(playerId, player);
                     
                     ws.send(JSON.stringify({
@@ -193,7 +294,8 @@ wss.on('connection', (ws) => {
                         worldHeight: WORLD_HEIGHT
                     }));
                     
-                    console.log(`Player joined: ${player.name} (${playerId})`);
+                    const walletStatus = player.wallet ? `wallet: ${player.wallet.slice(0,4)}...${player.wallet.slice(-4)}` : 'no wallet';
+                    console.log(`Player joined: ${player.name} (${playerId}) [${walletStatus}]`);
                     break;
                     
                 case 'input':
@@ -265,7 +367,22 @@ function gameTick() {
                 if (dist < 18) {
                     player.die();
                     other.score += player.length * 10;
+                    other.grow(Math.floor(player.length / 3));
                     console.log(`${player.name} was killed by ${other.name}`);
+                    
+                    // Broadcast kill event
+                    const killMsg = JSON.stringify({
+                        type: 'kill',
+                        killer: other.name,
+                        killerId: other.id,
+                        victim: player.name,
+                        victimId: player.id
+                    });
+                    wss.clients.forEach(client => {
+                        if (client.readyState === WebSocket.OPEN) {
+                            client.send(killMsg);
+                        }
+                    });
                     return;
                 }
             }
@@ -273,12 +390,16 @@ function gameTick() {
     });
     
     // Broadcast state
+    const alivePlayers = Array.from(players.values()).filter(p => p.alive);
     const state = {
         type: 'state',
         players: Array.from(players.values()).map(p => p.toJSON()),
         food: food,
         roundTime: roundTime,
-        roundNum: roundNum
+        roundNum: roundNum,
+        waiting: waitingForPlayers,
+        minPlayers: MIN_PLAYERS,
+        currentPlayers: alivePlayers.length
     };
     
     const stateStr = JSON.stringify(state);
@@ -291,6 +412,39 @@ function gameTick() {
 
 // Round timer
 setInterval(() => {
+    const alivePlayers = Array.from(players.values()).filter(p => p.alive);
+    const playerCount = alivePlayers.length;
+    
+    // Check if we have enough players
+    if (playerCount < MIN_PLAYERS) {
+        waitingForPlayers = true;
+        roundActive = false;
+        roundTime = ROUND_TIME; // Reset timer while waiting
+        return;
+    }
+    
+    // Start round if we just got enough players
+    if (waitingForPlayers && playerCount >= MIN_PLAYERS) {
+        waitingForPlayers = false;
+        roundActive = true;
+        roundTime = ROUND_TIME;
+        console.log(`[ROUND ${roundNum}] Starting with ${playerCount} players!`);
+        
+        // Broadcast round start
+        const startMsg = JSON.stringify({
+            type: 'roundStart',
+            round: roundNum,
+            players: playerCount
+        });
+        wss.clients.forEach(client => {
+            if (client.readyState === WebSocket.OPEN) {
+                client.send(startMsg);
+            }
+        });
+    }
+    
+    if (!roundActive) return;
+    
     if (roundTime > 0) {
         roundTime--;
     } else {
@@ -304,34 +458,100 @@ setInterval(() => {
             }
         });
         
+        // Broadcast round end to all clients
+        const roundEndMsg = JSON.stringify({
+            type: 'roundEnd',
+            round: roundNum,
+            winner: winner ? winner.name : null,
+            winnerId: winner ? winner.id : null,
+            winnerLength: winner ? winner.length : 0,
+            prize: '0.1 SOL'
+        });
+        wss.clients.forEach(client => {
+            if (client.readyState === WebSocket.OPEN) {
+                client.send(roundEndMsg);
+            }
+        });
+        
         if (winner) {
-            console.log(`Round ${roundNum} winner: ${winner.name} with length ${winner.length}`);
+            console.log(`[ROUND ${roundNum}] Winner: ${winner.name} (${winner.length}) - Prize: ${PRIZE_AMOUNT} SOL`);
+            
+            // Queue payout if winner has wallet
+            if (winner.wallet) {
+                payoutQueue.push({
+                    wallet: winner.wallet,
+                    amount: PRIZE_AMOUNT,
+                    player: winner.name,
+                    round: roundNum,
+                    timestamp: Date.now()
+                });
+                console.log(`[PAYOUT QUEUED] ${PRIZE_AMOUNT} SOL to ${winner.wallet.slice(0,4)}...${winner.wallet.slice(-4)}`);
+            } else {
+                console.log(`[PAYOUT SKIPPED] ${winner.name} has no wallet connected`);
+            }
         }
         
         // Reset round
         roundNum++;
         roundTime = ROUND_TIME;
         
-        // Respawn dead players
+        // Reset all players for new round
         players.forEach((player, id) => {
-            if (!player.alive) {
-                const newPlayer = new Player(id, player.name);
-                players.set(id, newPlayer);
-            }
+            const newPlayer = new Player(id, player.name);
+            players.set(id, newPlayer);
         });
+        
+        // Reset food
+        food = [];
+        spawnFood(300);
+        
+        console.log(`[ROUND ${roundNum}] Starting...`);
     }
 }, 1000);
 
 // Start game loop
 setInterval(gameTick, 1000 / TICK_RATE);
 
-server.listen(PORT, () => {
-    console.log(`
-╔═══════════════════════════════════════╗
-║       🐍 SLITHER SOL SERVER 🐍        ║
-╠═══════════════════════════════════════╣
-║  Server running on port ${PORT}          ║
-║  Open: http://localhost:${PORT}          ║
-╚═══════════════════════════════════════╝
-    `);
+// API endpoint to check payout queue (for admin)
+const originalHandler = server.listeners('request')[0];
+server.removeListener('request', originalHandler);
+
+server.on('request', (req, res) => {
+    if (req.url === '/api/payouts' && req.method === 'GET') {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({
+            pending: payoutQueue,
+            total: payoutQueue.reduce((sum, p) => sum + p.amount, 0)
+        }));
+        return;
+    }
+    
+    if (req.url === '/api/payouts/clear' && req.method === 'POST') {
+        const cleared = payoutQueue.length;
+        payoutQueue = [];
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ cleared }));
+        return;
+    }
+    
+    if (req.url === '/api/stats' && req.method === 'GET') {
+        const alivePlayers = Array.from(players.values()).filter(p => p.alive);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({
+            players: players.size,
+            alive: alivePlayers.length,
+            round: roundNum,
+            timeLeft: roundTime,
+            prizePool: PRIZE_AMOUNT
+        }));
+        return;
+    }
+    
+    originalHandler(req, res);
+});
+
+server.listen(PORT, '0.0.0.0', () => {
+    console.log(`$PUMPSNEK server running on port ${PORT}`);
+    console.log(`Prize per round: ${PRIZE_AMOUNT} SOL`);
+    console.log(`Round duration: ${ROUND_TIME}s`);
 });

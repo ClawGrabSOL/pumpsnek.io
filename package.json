@@ -1,12 +1,15 @@
 {
-  "name": "slither-sol",
+  "name": "pumpsnek",
   "version": "1.0.0",
-  "description": "Multiplayer Slither.io clone with SOL prizes",
+  "description": "Multiplayer snake game with SOL prizes",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
   },
   "dependencies": {
-    "ws": "^8.14.2"
+    "ws": "^8.14.2",
+    "dotenv": "^16.3.1",
+    "@solana/web3.js": "^1.87.6",
+    "bs58": "^5.0.0"
   }
 }
